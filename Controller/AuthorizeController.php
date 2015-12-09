@@ -13,10 +13,11 @@ namespace FOS\OAuthServerBundle\Controller;
 
 use FOS\OAuthServerBundle\Event\OAuthEvent;
 use FOS\OAuthServerBundle\Form\Handler\AuthorizeFormHandler;
-use OAuth2\OAuth2;
 use OAuth2\OAuth2ServerException;
-use Symfony\Component\DependencyInjection\ContainerAware;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -26,8 +27,10 @@ use Symfony\Component\Security\Core\User\UserInterface;
  *
  * @author Chris Jones <leeked@gmail.com>
  */
-class AuthorizeController extends ContainerAware
+class AuthorizeController implements ContainerAwareInterface
 {
+    use ContainerAwareTrait;
+
     /**
      * @var \FOS\OAuthServerBundle\Model\ClientInterface
      */
@@ -38,7 +41,7 @@ class AuthorizeController extends ContainerAware
      */
     public function authorizeAction(Request $request)
     {
-        $user = $this->container->get('security.context')->getToken()->getUser();
+        $user = $this->container->get('security.token_storage')->getToken()->getUser();
 
         if (!$user instanceof UserInterface) {
             throw new AccessDeniedException('This user does not have access to this section.');
@@ -87,7 +90,7 @@ class AuthorizeController extends ContainerAware
     protected function processSuccess(UserInterface $user, AuthorizeFormHandler $formHandler, Request $request)
     {
         if (true === $this->container->get('session')->get('_fos_oauth_server.ensure_logout')) {
-            $this->container->get('security.context')->setToken(null);
+            $this->container->get('security.token_storage')->setToken(null);
             $this->container->get('session')->invalidate();
         }
 
@@ -113,7 +116,7 @@ class AuthorizeController extends ContainerAware
     /**
      * Generate the redirection url when the authorize is completed
      *
-     * @param  \FOS\OAuthServerBundle\Model\UserInterface $user
+     * @param  UserInterface $user
      * @return string
      */
     protected function getRedirectionUrl(UserInterface $user)
@@ -122,7 +125,7 @@ class AuthorizeController extends ContainerAware
     }
 
     /**
-     * @return ClientInterface
+     * @return ClientInterface
      */
     protected function getClient()
     {
